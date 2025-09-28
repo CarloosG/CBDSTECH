@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'product_detail_page.dart';
 
 // Modelo para el producto
 class Producto {
@@ -26,15 +27,16 @@ class Producto {
 }
 
 final Map<int, String> imagenesProductos = {
-        1: 'assets/images/iphone15.png',
-        2: 'assets/images/Samsung.png',
-        3: 'assets/images/macbook.png',
-        4: 'assets/images/dell.png',
-        5: 'assets/images/ipad.png',
-        6: 'assets/images/sony.png',
-        7: 'assets/images/switch.png',
-        8: 'assets/images/airpods.png',
-      };
+  1: 'assets/images/iphone15.png',
+  2: 'assets/images/Samsung.png',
+  3: 'assets/images/macbook.png',
+  4: 'assets/images/dell.png',
+  5: 'assets/images/ipad.png',
+  6: 'assets/images/sony.png',
+  7: 'assets/images/switch.png',
+  8: 'assets/images/airpods.png',
+};
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -71,8 +73,6 @@ class _HomePageState extends State<HomePage> {
         productosTemp.add(Producto.fromJson(item));
       }
 
-      
-
       setState(() {
         productos = productosTemp;
         isLoading = false;
@@ -87,106 +87,117 @@ class _HomePageState extends State<HomePage> {
 
   // Widget para mostrar cada producto
   Widget _buildProductoCard(Producto producto) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ID y Nombre
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                imagenesProductos[producto.id] ?? "assets/images/laptop.png",
-                height: 100,
-                width: double.infinity,
-                fit: BoxFit.cover,
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailPage(producto: producto),
+          ),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ID y Nombre
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  imagenesProductos[producto.id] ?? "assets/images/laptop.png",
+                  height: 100,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    producto.nombre,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      producto.nombre,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'ID: ${producto.id}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Especificaciones
+              Text(
+                'Especificaciones:',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
                 ),
-                Container(
+              ),
+              const SizedBox(height: 4),
+              Text(
+                producto.especificaciones,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Precio
+              Container(
+                alignment: Alignment.centerRight,
+                child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 12,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
+                    color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
                   ),
                   child: Text(
-                    'ID: ${producto.id}',
+                    '\$${producto.precio.toStringAsFixed(2)}',
                     style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.blue.shade700,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Especificaciones
-            Text(
-              'Especificaciones:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              producto.especificaciones,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Precio
-            Container(
-              alignment: Alignment.centerRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Text(
-                  '\$${producto.precio.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green.shade700,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
