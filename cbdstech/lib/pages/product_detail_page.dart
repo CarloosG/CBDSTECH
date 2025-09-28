@@ -76,6 +76,7 @@ class ProductDetailPage extends StatelessWidget {
                 ),
                 textAlign: TextAlign.left,
               ),
+
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -94,6 +95,42 @@ class ProductDetailPage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: Colors.green.shade700,
                   ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(
+                    Icons.add_shopping_cart,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Agregar al carrito',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
+                  onPressed: () {
+                    // Aquí se agregaría la lógica para agregar al carrito
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${producto.nombre} agregado al carrito'),
+                        backgroundColor: Colors.blue.shade700,
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
