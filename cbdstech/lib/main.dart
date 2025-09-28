@@ -1,9 +1,10 @@
-import 'package:cbdstech/auth/auth_gate.dart';
 import 'package:cbdstech/pages/home_page.dart';
 import 'package:cbdstech/pages/login_page.dart';
 import 'package:cbdstech/pages/profile_page.dart';
 import 'package:flutter/material.dart';
+import 'package:cbdstech/pages/main_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cbdstech/pages/register_page.dart';
 
 void main() async {
 
@@ -20,11 +21,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+     debugShowCheckedModeBanner: false,
      home: const LoginPage(),
      routes: {
-
+      '/register': (context) => const RegisterPage(),
+      '/login': (context) => const LoginPage(),
       '/profile': (context) => const ProfilePage(),
       '/home': (context) => const HomePage(),
+      '/main': (context) => const MainPage(),
      },
     );
   }

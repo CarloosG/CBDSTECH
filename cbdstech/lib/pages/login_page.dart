@@ -1,8 +1,8 @@
 import 'package:cbdstech/pages/register_page.dart';
-import 'package:cbdstech/pages/profile_page.dart'; // Agrega esta importación
 import 'package:flutter/material.dart';
-
+import 'package:cbdstech/pages/home_page.dart';
 import 'package:cbdstech/auth/auth_service.dart';
+import 'package:cbdstech/pages/main_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,16 +16,18 @@ class _LoginPageState extends State<LoginPage> {
   final authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   void login() async {
     final email = _emailController.text;
     final password = _passwordController.text;
+    
     try {
         await authService.signInWithEmailPassword(email, password);
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const ProfilePage()),
+            MaterialPageRoute(builder: (context) => const MainPage()),
           );
         }
     }
@@ -43,39 +45,52 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          TextField(
-            controller: _emailController,
-            decoration: const InputDecoration(labelText: 'Email'),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.computer, size: 100, color: Colors.blue),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: "Correo electrónico",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: "Contraseña",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _isLoading
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      onPressed: login,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text("Iniciar sesión"),
+                    ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/register');
+                },
+                child: const Text("¿No tienes cuenta? Regístrate"),
+              ),
+            ],
           ),
-          TextField(
-            controller: _passwordController,
-            decoration: const InputDecoration(labelText: 'Password'),
-            obscureText: true,
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: login,
-            child: const Text('Login'),
-          ),
-
-          GestureDetector(
-            onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (context) => const RegisterPage()
-              )),
-            child:const Center(child: Text("No tienes cuenta? Registrate"))
-
-          )
-
-
-
-
-        ],
+        ),
       ),
     );
   }
