@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../pages/home_page.dart';
+import 'cart.dart'; 
 
 class ProductDetailPage extends StatelessWidget {
   final Producto producto;
@@ -123,7 +124,7 @@ class ProductDetailPage extends StatelessWidget {
                     elevation: 3,
                   ),
                   onPressed: () {
-                    // Aquí se agregaría la lógica para agregar al carrito
+                    cart.add(producto); // se agrega al carrito global
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('${producto.nombre} agregado al carrito'),
