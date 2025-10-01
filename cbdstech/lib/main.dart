@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:cbdstech/pages/main_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cbdstech/pages/register_page.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 
 void main() async {
 
@@ -30,6 +32,16 @@ class MyApp extends StatelessWidget {
       '/home': (context) => const HomePage(),
       '/main': (context) => const MainPage(),
      },
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es', 'ES'), // Español
+        Locale('en', 'US'), // Inglés (opcional)
+      ],
+      locale: const Locale('es', 'ES')
     );
   }
 }
