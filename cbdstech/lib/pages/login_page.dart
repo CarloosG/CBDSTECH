@@ -9,7 +9,6 @@ class LoginPage extends StatefulWidget {
 
   @override
   State<LoginPage> createState() => _LoginPageState();
-
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -21,26 +20,23 @@ class _LoginPageState extends State<LoginPage> {
   void login() async {
     final email = _emailController.text;
     final password = _passwordController.text;
-    
+
     try {
-        await authService.signInWithEmailPassword(email, password);
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainPage()),
-          );
-        }
-    }
-
-    catch (e) {
-      if(mounted) {ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ha ocurrido un error: $e')),
-      );
+      await authService.signInWithEmailPassword(email, password);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ha ocurrido un error: $e')));
+      }
     }
   }
-  }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -73,14 +69,14 @@ class _LoginPageState extends State<LoginPage> {
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
-                      onPressed: login,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("Iniciar sesión"),
+                    onPressed: login,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
                     ),
+                    child: const Text("Iniciar sesión"),
+                  ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {

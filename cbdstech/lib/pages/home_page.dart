@@ -46,12 +46,16 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Producto> productos = [];
+  List<Producto> productosFiltrados = [];
   bool isLoading = true;
   String? error;
+  String searchQuery = "";
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
     _cargarProductos();
   }
 
@@ -75,13 +79,36 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         productos = productosTemp;
+        productosFiltrados = productosTemp;
         isLoading = false;
       });
+      _filtrarProductos(searchQuery);
     } catch (e) {
       setState(() {
         error = 'Error al cargar productos: $e';
         isLoading = false;
       });
+    }
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      searchQuery = _searchController.text;
+      _filtrarProductos(searchQuery);
+    });
+  }
+
+  void _filtrarProductos(String query) {
+    if (query.isEmpty) {
+      productosFiltrados = List.from(productos);
+    } else {
+      productosFiltrados =
+          productos.where((producto) {
+            final nombre = producto.nombre.toLowerCase();
+            final especificaciones = producto.especificaciones.toLowerCase();
+            final q = query.toLowerCase();
+            return nombre.contains(q) || especificaciones.contains(q);
+          }).toList();
     }
   }
 
@@ -104,7 +131,7 @@ class _HomePageState extends State<HomePage> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: SizedBox(
-            height: 270,
+            height: 220,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -113,7 +140,7 @@ class _HomePageState extends State<HomePage> {
                   child: Image.asset(
                     imagenesProductos[producto.id] ??
                         "assets/images/laptop.png",
-                    height: 210, // Imagen aún más grande
+                    height: 170, // Imagen más grande
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
@@ -206,6 +233,34 @@ class _HomePageState extends State<HomePage> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+                const SizedBox(height: 12),
+                // Barra de búsqueda
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar productos...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 20,
+                      ),
+                    ),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
               ],
             ),
           ),
@@ -258,7 +313,7 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     )
-                    : productos.isEmpty
+                    : productosFiltrados.isEmpty
                     ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -293,9 +348,9 @@ class _HomePageState extends State<HomePage> {
                       onRefresh: _cargarProductos,
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: productos.length,
+                        itemCount: productosFiltrados.length,
                         itemBuilder: (context, index) {
-                          return _buildProductoCard(productos[index]);
+                          return _buildProductoCard(productosFiltrados[index]);
                         },
                       ),
                     ),
