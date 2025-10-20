@@ -21,6 +21,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _confirmPasswordController = TextEditingController();
   
   DateTime? _fechaNacimiento;
+  String _rolSeleccionado = 'cliente'; // Por defecto cliente
   bool _isLoading = false;
 
   @override
@@ -73,7 +74,7 @@ class _RegisterPageState extends State<RegisterPage> {
       // 1. Registrar usuario en Auth
       final authResponse = await authService.signUpWithEmailPassword(email, password);
       
-      // 2. Insertar datos en la tabla usuario
+      // 2. Insertar datos en la tabla usuario CON EL ROL SELECCIONADO
       final userId = authResponse.user?.id;
       
       if (userId != null) {
@@ -84,13 +85,18 @@ class _RegisterPageState extends State<RegisterPage> {
           'ciudad': _ciudadController.text.trim(),
           'direccion': _direccionController.text.trim(),
           'fecha_nacimiento': _fechaNacimiento?.toIso8601String(),
-          'rol': 'cliente',
+          'rol': _rolSeleccionado, 
         });
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Cuenta creada exitosamente!')),
+          SnackBar(
+            content: Text(
+              '¡Cuenta creada exitosamente como $_rolSeleccionado!',
+            ),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pop(context);
       }
@@ -178,6 +184,77 @@ class _RegisterPageState extends State<RegisterPage> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+
+                
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade400),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tipo de cuenta',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: Row(
+                                children: [
+                                  Icon(Icons.person, 
+                                    color: Colors.blue.shade700,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Cliente'),
+                                ],
+                              ),
+                              value: 'cliente',
+                              groupValue: _rolSeleccionado,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rolSeleccionado = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: Row(
+                                children: [
+                                  Icon(Icons.admin_panel_settings,
+                                    color: Colors.red.shade700,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('Admin'),
+                                ],
+                              ),
+                              value: 'admin',
+                              groupValue: _rolSeleccionado,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rolSeleccionado = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -285,6 +362,49 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 24),
 
+                // Indicador visual del rol seleccionado
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _rolSeleccionado == 'admin'
+                        ? Colors.red.shade50
+                        : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _rolSeleccionado == 'admin'
+                          ? Colors.red.shade200
+                          : Colors.blue.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _rolSeleccionado == 'admin'
+                            ? Icons.admin_panel_settings
+                            : Icons.person,
+                        color: _rolSeleccionado == 'admin'
+                            ? Colors.red.shade700
+                            : Colors.blue.shade700,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _rolSeleccionado == 'admin'
+                              ? ' Registrándote como Administrador\nTendrás acceso al panel de administración'
+                              : ' Registrándote como Cliente\nPodrás realizar compras en la tienda',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _rolSeleccionado == 'admin'
+                                ? Colors.red.shade700
+                                : Colors.blue.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
                 // Botón
                 _isLoading
                     ? const CircularProgressIndicator()
@@ -295,10 +415,16 @@ class _RegisterPageState extends State<RegisterPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          backgroundColor: Colors.blue.shade700,
+                          backgroundColor: _rolSeleccionado == 'admin'
+                              ? Colors.red.shade700
+                              : Colors.blue.shade700,
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text("Crear cuenta"),
+                        child: Text(
+                          _rolSeleccionado == 'admin'
+                              ? "Crear cuenta de Admin"
+                              : "Crear cuenta de Cliente",
+                        ),
                       ),
                 const SizedBox(height: 16),
 
