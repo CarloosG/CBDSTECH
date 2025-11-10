@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:cbdstech/pages/sales_page.dart';  
 
 class AdminOrdersPage extends StatefulWidget {
   const AdminOrdersPage({super.key});
@@ -33,7 +34,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       // Obtenemos los pedidos
       final pedidosResponse = await supabase
           .from('pedidos')
-          .select('pedido_id, usuario_id, producto_id, cantidad, total, fecha, fecha_envio')
+          .select(
+            'pedido_id, usuario_id, producto_id, cantidad, total, fecha, fecha_envio',
+          )
           .order('fecha', ascending: false);
 
       // Obtenemos todos los usuarios
@@ -85,7 +88,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
 
   List<Map<String, dynamic>> get _pedidosFiltrados {
     final now = DateTime.now();
-    
+
     if (_filtroEstado == 'pendientes') {
       return _pedidos.where((pedido) {
         final fechaEnvio = DateTime.parse(pedido['fecha_envio']);
@@ -97,7 +100,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
         return fechaEnvio.isBefore(now) || fechaEnvio.isAtSameMomentAs(now);
       }).toList();
     }
-    
+
     return _pedidos;
   }
 
@@ -122,7 +125,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   Color _getEstadoColor(String fechaEnvio) {
     final fecha = DateTime.parse(fechaEnvio);
     final now = DateTime.now();
-    
+
     if (fecha.isAfter(now)) {
       return Colors.orange;
     } else {
@@ -133,7 +136,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   String _getEstadoTexto(String fechaEnvio) {
     final fecha = DateTime.parse(fechaEnvio);
     final now = DateTime.now();
-    
+
     if (fecha.isAfter(now)) {
       return 'Pendiente';
     } else {
@@ -147,11 +150,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       0,
       (sum, pedido) => sum + (pedido['total'] as num).toDouble(),
     );
-    
-    final pedidosPendientes = _pedidos.where((pedido) {
-      final fechaEnvio = DateTime.parse(pedido['fecha_envio']);
-      return fechaEnvio.isAfter(DateTime.now());
-    }).length;
+
+    final pedidosPendientes =
+        _pedidos.where((pedido) {
+          final fechaEnvio = DateTime.parse(pedido['fecha_envio']);
+          return fechaEnvio.isAfter(DateTime.now());
+        }).length;
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -162,10 +166,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
           children: [
             const Text(
               'Estadísticas',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -215,13 +216,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -229,7 +224,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   Widget _buildPedidoCard(Map<String, dynamic> pedido) {
     final usuario = pedido['usuario'] as Map<String, dynamic>?;
     final producto = pedido['producto'] as Map<String, dynamic>?;
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       elevation: 3,
@@ -293,10 +288,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                 const SizedBox(height: 16),
                 const Text(
                   'Información del Cliente',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 _buildInfoRow(
@@ -304,11 +296,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                   'Nombre',
                   usuario?['nombre'] ?? 'N/A',
                 ),
-                _buildInfoRow(
-                  Icons.email,
-                  'Email',
-                  usuario?['email'] ?? 'N/A',
-                ),
+                _buildInfoRow(Icons.email, 'Email', usuario?['email'] ?? 'N/A'),
                 _buildInfoRow(
                   Icons.location_city,
                   'Ciudad',
@@ -322,10 +310,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                 const SizedBox(height: 16),
                 const Text(
                   'Fechas',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
                 _buildInfoRow(
@@ -346,8 +331,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value,
-      {bool isHighlighted = false}) {
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value, {
+    bool isHighlighted = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -388,86 +377,101 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      body: _isLoading
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Cargando pedidos...'),
-                ],
-              ),
-            )
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          size: 64, color: Colors.red.shade400),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.red.shade600),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _cargarPedidos,
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SalesPage()),
+          );
+        },
+        label: const Text('Tabla de ventas'),
+        icon: const Icon(Icons.table_chart),
+      ),
+      body:
+          _isLoading
+              ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildEstadisticas(),
-                    // Filtros
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Filtrar: ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: SegmentedButton<String>(
-                              segments: const [
-                                ButtonSegment(
-                                  value: 'todos',
-                                  label: Text('Todos'),
-                                  icon: Icon(Icons.all_inclusive),
-                                ),
-                                ButtonSegment(
-                                  value: 'pendientes',
-                                  label: Text('Pendientes'),
-                                  icon: Icon(Icons.pending),
-                                ),
-                                ButtonSegment(
-                                  value: 'enviados',
-                                  label: Text('Enviados'),
-                                  icon: Icon(Icons.check_circle),
-                                ),
-                              ],
-                              selected: {_filtroEstado},
-                              onSelectionChanged: (Set<String> newSelection) {
-                                setState(() {
-                                  _filtroEstado = newSelection.first;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Cargando pedidos...'),
+                  ],
+                ),
+              )
+              : _error != null
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red.shade400,
                     ),
-                    const SizedBox(height: 8),
-                    // Lista de pedidos
-                    Expanded(
-                      child: _pedidosFiltrados.isEmpty
-                          ? Center(
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.red.shade600),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _cargarPedidos,
+                      child: const Text('Reintentar'),
+                    ),
+                  ],
+                ),
+              )
+              : Column(
+                children: [
+                  _buildEstadisticas(),
+                  // Filtros
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Filtrar: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SegmentedButton<String>(
+                            segments: const [
+                              ButtonSegment(
+                                value: 'todos',
+                                label: Text('Todos'),
+                                icon: Icon(Icons.all_inclusive),
+                              ),
+                              ButtonSegment(
+                                value: 'pendientes',
+                                label: Text('Pendientes'),
+                                icon: Icon(Icons.pending),
+                              ),
+                              ButtonSegment(
+                                value: 'enviados',
+                                label: Text('Enviados'),
+                                icon: Icon(Icons.check_circle),
+                              ),
+                            ],
+                            selected: {_filtroEstado},
+                            onSelectionChanged: (Set<String> newSelection) {
+                              setState(() {
+                                _filtroEstado = newSelection.first;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Lista de pedidos
+                  Expanded(
+                    child:
+                        _pedidosFiltrados.isEmpty
+                            ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -487,20 +491,21 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                                 ],
                               ),
                             )
-                          : RefreshIndicator(
+                            : RefreshIndicator(
                               onRefresh: _cargarPedidos,
                               child: ListView.builder(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 itemCount: _pedidosFiltrados.length,
                                 itemBuilder: (context, index) {
                                   return _buildPedidoCard(
-                                      _pedidosFiltrados[index]);
+                                    _pedidosFiltrados[index],
+                                  );
                                 },
                               ),
                             ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
     );
   }
 }
