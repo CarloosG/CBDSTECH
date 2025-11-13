@@ -26,19 +26,19 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
 
     final userId = user.id;
 
-    // Obtener pedidos del usuario actual filtrados por usuario_id
+
     final dynamic result = await _supabase
         .from('pedidos')
         .select()
         .eq('usuario_id', userId)
         .order('fecha', ascending: false);
 
-    // Si la respuesta es una lista directa
+
     if (result is List) {
       return List<Map<String, dynamic>>.from(result);
     }
 
-    // Si la respuesta es un mapa con data / error (antigua API)
+
     if (result is Map) {
       if (result.containsKey('error') && result['error'] != null) {
         throw Exception(result['error'].toString());
@@ -48,7 +48,7 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
       return List<Map<String, dynamic>>.from(data as List<dynamic>);
     }
 
-    // Caso por defecto: no hay datos
+
     return [];
   }
 
@@ -67,22 +67,18 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
     final fechaEnvioRaw = order['fecha_envio'];
     final fechaEnvio = fechaEnvioRaw ?? 'Pendiente';
 
-    // Lógica de cancelación:
-    // Por defecto permitimos cancelar si `fecha_envio` es nulo o si la fecha de envío
-    // está en el futuro (es decir, aún no se ha enviado). Si prefieres otra regla
-    // (por ejemplo cancelar si la fecha es menor que ahora) dime y lo ajusto.
     bool canCancel = false;
     if (fechaEnvioRaw == null || fechaEnvioRaw.toString().trim().isEmpty) {
       canCancel = true;
     } else {
       try {
         final sendDate = DateTime.parse(fechaEnvioRaw.toString());
-        // si la fecha de envío es posterior a ahora -> aún no enviado -> cancelar permitido
+
         if (sendDate.isAfter(DateTime.now())) {
           canCancel = true;
         }
       } catch (e) {
-        // si no podemos parsear, no permitimos cancelar por seguridad
+
         canCancel = false;
       }
     }
@@ -213,15 +209,14 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
 
   Future<void> _cancelOrder(dynamic pedidoId) async {
     try {
-      // Llamada a Supabase para borrar el pedido por pedido_id
+
       final res = await _supabase.from('pedidos').delete().eq('pedido_id', pedidoId);
 
-      // Manejo defensivo de la respuesta
+
       if (res is Map && res.containsKey('error') && res['error'] != null) {
         throw Exception(res['error'].toString());
       }
 
-      // Suponer éxito si no hay error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pedido cancelado correctamente')),
