@@ -15,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   void login() async {
     final email = _emailController.text;
