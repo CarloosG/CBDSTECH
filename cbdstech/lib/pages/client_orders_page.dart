@@ -64,7 +64,28 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
     final fecha = order['fecha'] ?? '';
     final total = order['total'] ?? 0.0;
     final cantidad = order['cantidad'] ?? 0;
-    final fechaEnvio = order['fecha_envio'] ?? 'Pendiente';
+    final fechaEnvioRaw = order['fecha_envio'];
+    final fechaEnvio = fechaEnvioRaw ?? 'Pendiente';
+
+    // Lógica de cancelación:
+    // Por defecto permitimos cancelar si `fecha_envio` es nulo o si la fecha de envío
+    // está en el futuro (es decir, aún no se ha enviado). Si prefieres otra regla
+    // (por ejemplo cancelar si la fecha es menor que ahora) dime y lo ajusto.
+    bool canCancel = false;
+    if (fechaEnvioRaw == null || fechaEnvioRaw.toString().trim().isEmpty) {
+      canCancel = true;
+    } else {
+      try {
+        final sendDate = DateTime.parse(fechaEnvioRaw.toString());
+        // si la fecha de envío es posterior a ahora -> aún no enviado -> cancelar permitido
+        if (sendDate.isAfter(DateTime.now())) {
+          canCancel = true;
+        }
+      } catch (e) {
+        // si no podemos parsear, no permitimos cancelar por seguridad
+        canCancel = false;
+      }
+    }
 
     // Formatear fecha
     String fechaFormato = '';
@@ -79,20 +100,44 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: ListTile(
-        title: Text('Pedido #$pedidoId'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (fechaFormato.isNotEmpty) Text('Fecha: $fechaFormato'),
-            Text('Cantidad: $cantidad'),
-            Text('Total: \$${total.toStringAsFixed(2)}'),
-            Text('Envío: $fechaEnvio'),
-          ],
-        ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      child: InkWell(
         onTap: () => _showOrderDetails(order),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Pedido #$pedidoId', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Icon(Icons.chevron_right, size: 18),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (fechaFormato.isNotEmpty) Text('Fecha: $fechaFormato'),
+              Text('Cantidad: $cantidad'),
+              Text('Total: \$${total.toStringAsFixed(2)}'),
+              Text('Envío: $fechaEnvio'),
+              const SizedBox(height: 8),
+              if (canCancel)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      onPressed: () => _confirmCancel(pedidoId),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -140,6 +185,56 @@ class _ClientOrdersPageState extends State<ClientOrdersPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmCancel(dynamic pedidoId) async {
+    final should = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar cancelación'),
+        content: const Text('¿Deseas cancelar este pedido? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sí, cancelar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (should == true) {
+      await _cancelOrder(pedidoId);
+    }
+  }
+
+  Future<void> _cancelOrder(dynamic pedidoId) async {
+    try {
+      // Llamada a Supabase para borrar el pedido por pedido_id
+      final res = await _supabase.from('pedidos').delete().eq('pedido_id', pedidoId);
+
+      // Manejo defensivo de la respuesta
+      if (res is Map && res.containsKey('error') && res['error'] != null) {
+        throw Exception(res['error'].toString());
+      }
+
+      // Suponer éxito si no hay error
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pedido cancelado correctamente')),
+        );
+      }
+      await _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cancelar pedido: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildDetailRow(String label, String value) {
