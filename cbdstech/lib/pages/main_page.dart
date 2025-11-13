@@ -4,6 +4,7 @@ import 'home_page.dart';
 import 'profile_page.dart';
 import 'shopping_cart_page.dart';
 import 'admin_orders_page.dart';
+import 'client_orders_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -68,6 +69,7 @@ class _MainPageState extends State<MainPage> {
       return const [
         HomePage(),
         ShoppingCartPage(),
+        ClientOrdersPage(),
         ProfilePage(),
       ];
     }
@@ -103,6 +105,10 @@ class _MainPageState extends State<MainPage> {
         BottomNavigationBarItem(
           icon: Icon(Icons.shopping_cart),
           label: 'Carrito',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.receipt_long),
+          label: 'Pedidos',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person),

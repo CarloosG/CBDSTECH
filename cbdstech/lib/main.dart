@@ -3,6 +3,7 @@ import 'package:cbdstech/pages/login_page.dart';
 import 'package:cbdstech/pages/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cbdstech/pages/main_page.dart';
+import 'package:cbdstech/pages/client_orders_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cbdstech/pages/register_page.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -30,7 +31,8 @@ class MyApp extends StatelessWidget {
       '/login': (context) => const LoginPage(),
       '/profile': (context) => const ProfilePage(),
       '/home': (context) => const HomePage(),
-      '/main': (context) => const MainPage(),
+  '/main': (context) => const MainPage(),
+  '/client_orders': (context) => const ClientOrdersPage(),
      },
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
