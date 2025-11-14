@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AdminAddProductPage extends StatefulWidget {
   const AdminAddProductPage({super.key});
@@ -14,6 +16,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
   final _especificacionesCtrl = TextEditingController();
   final _precioCtrl = TextEditingController();
   bool _submitting = false;
+  XFile? _pickedImage;
+  Uint8List? _imageBytes;
+  String? _imageError;
 
   @override
   void dispose() {
@@ -30,24 +35,68 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
       final nombre = _nombreCtrl.text.trim();
       final especificaciones = _especificacionesCtrl.text.trim();
       final precio = double.parse(_precioCtrl.text.replaceAll(',', '.'));
+      String? imagenUrl;
+      if (_imageBytes != null) {
+        final ext = _pickedImage!.name.split('.').last.toLowerCase();
+        final sanitizedName = nombre.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+        final fileName =
+            '${DateTime.now().millisecondsSinceEpoch}_$sanitizedName.$ext';
+        try {
+          await Supabase.instance.client.storage
+              .from('productos')
+              .uploadBinary(
+                'images/$fileName',
+                _imageBytes!,
+                fileOptions: const FileOptions(contentType: 'image/*'),
+              );
+          imagenUrl = Supabase.instance.client.storage
+              .from('productos')
+              .getPublicUrl('images/$fileName');
+        } catch (e) {
+          // Si falla la subida, continuamos sin URL
+          _imageError = 'No se pudo subir la imagen: ' + e.toString();
+        }
+      }
 
-      await Supabase.instance.client.from('productos').insert({
-        'nombre': nombre,
-        'especificaciones': especificaciones,
-        'precio': precio,
-      });
+      // Intento 1: insertar con imagen_url si existe la columna
+      try {
+        await Supabase.instance.client.from('productos').insert({
+          'nombre': nombre,
+          'especificaciones': especificaciones,
+          'precio': precio,
+          if (imagenUrl != null) 'imagen_url': imagenUrl,
+        });
+      } on PostgrestException catch (pg) {
+        if (pg.code == '42703') {
+          // imagen_url columna no existe -> insertar sin ella
+          await Supabase.instance.client.from('productos').insert({
+            'nombre': nombre,
+            'especificaciones': especificaciones,
+            'precio': precio,
+          });
+        } else if (pg.code == '42501') {
+          // RLS: sin permisos
+          throw Exception('No tienes permisos para crear productos (RLS).');
+        } else {
+          rethrow;
+        }
+      }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Producto añadido correctamente')),
-        );
+        final msg =
+            _imageError == null
+                ? 'Producto añadido correctamente'
+                : 'Producto añadido. ' + _imageError!;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al añadir: $e')));
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -65,6 +114,45 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Selector de imagen y preview
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child:
+                      _imageBytes == null
+                          ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_a_photo,
+                                color: Colors.grey.shade600,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Toca para seleccionar una imagen',
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                            ],
+                          )
+                          : ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              _imageBytes!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
+                          ),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _nombreCtrl,
                 textInputAction: TextInputAction.next,
@@ -104,7 +192,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                 ),
                 decoration: const InputDecoration(
                   labelText: 'Precio',
-                  prefixText: '4 ',
+                  prefixText: '\$ ',
                   hintText: '0.00',
                   border: OutlineInputBorder(),
                 ),
@@ -146,5 +234,22 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? file = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 90,
+    );
+    if (file != null) {
+      final bytes = await file.readAsBytes();
+      setState(() {
+        _pickedImage = file;
+        _imageBytes = bytes;
+        _imageError = null;
+      });
+    }
   }
 }

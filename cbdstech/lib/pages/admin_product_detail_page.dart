@@ -19,11 +19,18 @@ class AdminProductDetailPage extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                imagenesProductos[producto.id] ?? 'assets/images/laptop.png',
+              child: SizedBox(
                 height: 220,
                 width: double.infinity,
-                fit: BoxFit.cover,
+                child:
+                    (producto.imagenUrl != null &&
+                            producto.imagenUrl!.isNotEmpty)
+                        ? Image.network(producto.imagenUrl!, fit: BoxFit.cover)
+                        : Image.asset(
+                          imagenesProductos[producto.id] ??
+                              'assets/images/laptop.png',
+                          fit: BoxFit.cover,
+                        ),
               ),
             ),
             const SizedBox(height: 16),

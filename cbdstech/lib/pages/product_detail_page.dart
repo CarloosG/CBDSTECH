@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../pages/home_page.dart';
-import 'cart.dart'; 
+import 'cart.dart';
 
 class ProductDetailPage extends StatelessWidget {
   final Producto producto;
@@ -26,11 +26,21 @@ class ProductDetailPage extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  imagenesProductos[producto.id] ?? "assets/images/laptop.png",
+                child: SizedBox(
                   height: 200,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  child:
+                      (producto.imagenUrl != null &&
+                              producto.imagenUrl!.isNotEmpty)
+                          ? Image.network(
+                            producto.imagenUrl!,
+                            fit: BoxFit.cover,
+                          )
+                          : Image.asset(
+                            imagenesProductos[producto.id] ??
+                                'assets/images/iphone15.png',
+                            fit: BoxFit.cover,
+                          ),
                 ),
               ),
               const SizedBox(height: 24),

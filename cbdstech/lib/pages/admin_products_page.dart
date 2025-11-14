@@ -23,15 +23,28 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
   }
 
   Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      setState(() {
-        _loading = true;
-        _error = null;
-      });
-      final data = await Supabase.instance.client
-          .from('productos')
-          .select('id, nombre, especificaciones, precio')
-          .order('id', ascending: true);
+      List<dynamic> data;
+      try {
+        data = await Supabase.instance.client
+            .from('productos')
+            .select('id, nombre, especificaciones, precio, imagen_url')
+            .order('id', ascending: true);
+      } on PostgrestException catch (pg) {
+        // Columna imagen_url no existe -> reintentar sin ella
+        if (pg.code == '42703') {
+          data = await Supabase.instance.client
+              .from('productos')
+              .select('id, nombre, especificaciones, precio')
+              .order('id', ascending: true);
+        } else {
+          rethrow;
+        }
+      }
       final list =
           List<Map<String, dynamic>>.from(
             data,
@@ -150,11 +163,17 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  imagenesProductos[p.id] ?? 'assets/images/laptop.png',
+                child: SizedBox(
                   width: 88,
                   height: 88,
-                  fit: BoxFit.cover,
+                  child:
+                      (p.imagenUrl != null && p.imagenUrl!.isNotEmpty)
+                          ? Image.network(p.imagenUrl!, fit: BoxFit.cover)
+                          : Image.asset(
+                            imagenesProductos[p.id] ??
+                                'assets/images/laptop.png',
+                            fit: BoxFit.cover,
+                          ),
                 ),
               ),
               const SizedBox(width: 12),

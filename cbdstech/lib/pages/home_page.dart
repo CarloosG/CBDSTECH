@@ -8,12 +8,14 @@ class Producto {
   final String nombre;
   final String especificaciones;
   final double precio;
+  final String? imagenUrl;
 
   Producto({
     required this.id,
     required this.nombre,
     required this.especificaciones,
     required this.precio,
+    this.imagenUrl,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,7 @@ class Producto {
       nombre: json['nombre'] as String,
       especificaciones: json['especificaciones'] as String,
       precio: (json['precio'] as num).toDouble(),
+      imagenUrl: json['imagen_url'] as String?,
     );
   }
 }
@@ -69,7 +72,7 @@ class _HomePageState extends State<HomePage> {
 
       final response = await Supabase.instance.client
           .from('productos') // Nombre de tu tabla en Supabase
-          .select('id, nombre, especificaciones, precio')
+          .select('id, nombre, especificaciones, precio, imagen_url')
           .order('id', ascending: true);
 
       final List<Producto> productosTemp = [];
@@ -137,12 +140,21 @@ class _HomePageState extends State<HomePage> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    imagenesProductos[producto.id] ??
-                        "assets/images/laptop.png",
-                    height: 170, // Imagen más grande
+                  child: SizedBox(
+                    height: 170,
                     width: double.infinity,
-                    fit: BoxFit.cover,
+                    child:
+                        (producto.imagenUrl != null &&
+                                producto.imagenUrl!.isNotEmpty)
+                            ? Image.network(
+                              producto.imagenUrl!,
+                              fit: BoxFit.cover,
+                            )
+                            : Image.asset(
+                              imagenesProductos[producto.id] ??
+                                  'assets/images/iphone15.png',
+                              fit: BoxFit.cover,
+                            ),
                   ),
                 ),
                 const SizedBox(height: 12),
