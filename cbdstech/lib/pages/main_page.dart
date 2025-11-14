@@ -17,6 +17,7 @@ class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
   String? _userRole;
   bool _isLoadingRole = true;
+  bool _initialAdminIndexApplied = false;
 
   @override
   void initState() {
@@ -27,17 +28,22 @@ class _MainPageState extends State<MainPage> {
   Future<void> _loadUserRole() async {
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
-      
+
       if (userId != null) {
-        final response = await Supabase.instance.client
-            .from('usuario')
-            .select('rol')
-            .eq('id', userId)
-            .single();
-        
+        final response =
+            await Supabase.instance.client
+                .from('usuario')
+                .select('rol')
+                .eq('id', userId)
+                .single();
+
         setState(() {
           _userRole = response['rol'] as String?;
           _isLoadingRole = false;
+          if (_userRole == 'admin' && !_initialAdminIndexApplied) {
+            _selectedIndex = 2; // Admin tab por defecto
+            _initialAdminIndexApplied = true;
+          }
         });
       } else {
         setState(() {
@@ -49,9 +55,9 @@ class _MainPageState extends State<MainPage> {
         _isLoadingRole = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar rol: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cargar rol: $e')));
       }
     }
   }
@@ -79,10 +85,7 @@ class _MainPageState extends State<MainPage> {
   List<BottomNavigationBarItem> get _navigationItems {
     if (_userRole == 'admin') {
       return const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.shopping_cart),
           label: 'Carrito',
@@ -91,17 +94,11 @@ class _MainPageState extends State<MainPage> {
           icon: Icon(Icons.admin_panel_settings),
           label: 'Admin',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Perfil',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
       ];
     } else {
       return const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.shopping_cart),
           label: 'Carrito',
@@ -110,10 +107,7 @@ class _MainPageState extends State<MainPage> {
           icon: Icon(Icons.receipt_long),
           label: 'Pedidos',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Perfil',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
       ];
     }
   }
@@ -127,11 +121,7 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoadingRole) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(

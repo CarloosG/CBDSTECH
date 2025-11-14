@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:cbdstech/pages/sales_page.dart';  
+import 'package:cbdstech/pages/sales_page.dart';
+import 'dart:ui';
+import 'package:cbdstech/pages/dashboards_page.dart';
+import 'package:cbdstech/pages/admin_products_page.dart';
 
 class AdminOrdersPage extends StatefulWidget {
   const AdminOrdersPage({super.key});
@@ -157,42 +160,45 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
           return fechaEnvio.isAfter(DateTime.now());
         }).length;
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text(
-              'Estadísticas',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildEstadisticaItem(
-                  'Total Pedidos',
-                  totalPedidos.toString(),
-                  Icons.shopping_cart,
-                  Colors.blue,
-                ),
-                _buildEstadisticaItem(
-                  'Pendientes',
-                  pedidosPendientes.toString(),
-                  Icons.pending_actions,
-                  Colors.orange,
-                ),
-                _buildEstadisticaItem(
-                  'Ingresos',
-                  '\$${totalIngresos.toStringAsFixed(2)}',
-                  Icons.attach_money,
-                  Colors.green,
-                ),
-              ],
-            ),
-          ],
+    return GestureDetector(
+      onLongPress: _showQuickActions,
+      child: Card(
+        margin: const EdgeInsets.all(16),
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              const Text(
+                'Pedidos',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildEstadisticaItem(
+                    'Total Pedidos',
+                    totalPedidos.toString(),
+                    Icons.shopping_cart,
+                    Colors.blue,
+                  ),
+                  _buildEstadisticaItem(
+                    'Pendientes',
+                    pedidosPendientes.toString(),
+                    Icons.pending_actions,
+                    Colors.orange,
+                  ),
+                  _buildEstadisticaItem(
+                    'Ingresos',
+                    '\$${totalIngresos.toStringAsFixed(2)}',
+                    Icons.attach_money,
+                    Colors.green,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -506,6 +512,146 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                   ),
                 ],
               ),
+    );
+  }
+
+  Future<void> _showQuickActions() async {
+    await showGeneralDialog(
+      context: context,
+      barrierLabel: 'Opciones',
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (context, a1, a2) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.9,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Ir a',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const DashboardsPage(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.dashboard,
+                                      color: Colors.blue.shade700,
+                                      size: 30,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Dashboards',
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AdminProductsPage(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 18,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.storefront,
+                                      color: Colors.green.shade700,
+                                      size: 30,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Productos',
+                                      style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cerrar'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
