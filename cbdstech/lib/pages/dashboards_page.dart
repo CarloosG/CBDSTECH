@@ -1,6 +1,6 @@
 import 'dart:collection';
+import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -29,6 +29,140 @@ class _DashboardsPageState extends State<DashboardsPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  String _formatYLabel(double v) {
+    if (v.abs() >= 1000.0) {
+      final k = v / 1000.0;
+      final s = (k % 1 == 0) ? k.toStringAsFixed(0) : k.toStringAsFixed(1);
+      return '${s}K';
+    }
+    return v.toStringAsFixed(0);
+  }
+
+  // Paso "agradable" para el eje Y buscando ~6 divisiones
+  double _niceInterval(double maxY) {
+    if (maxY <= 0) return 1;
+    const desiredTicks = 6;
+    final raw = maxY / desiredTicks;
+    final magnitude = math.pow(10, (math.log(raw) / math.ln10).floor());
+    final residual = raw / magnitude;
+    double nice;
+    if (residual <= 1) {
+      nice = 1;
+    } else if (residual <= 2) {
+      nice = 2;
+    } else if (residual <= 2.5) {
+      nice = 2.5;
+    } else if (residual <= 5) {
+      nice = 5;
+    } else {
+      nice = 10;
+    }
+    return (nice * magnitude).toDouble();
+  }
+
+  // Rango de fechas efectivo según selección actual
+  DateTimeRange _effectiveRange() {
+    final now = DateTime.now();
+    if (_customRange != null) return _customRange!;
+    if (_rangeDays > 0) {
+      final end = DateTime(now.year, now.month, now.day);
+      final start = end.subtract(Duration(days: _rangeDays - 1));
+      return DateTimeRange(start: start, end: end);
+    }
+    if (_pedidos.isNotEmpty) {
+      DateTime? minD;
+      DateTime? maxD;
+      for (final p in _pedidos) {
+        final dt = DateTime.tryParse('${p['fecha']}');
+        if (dt == null) continue;
+        final day = DateTime(dt.year, dt.month, dt.day);
+        if (minD == null || day.isBefore(minD)) minD = day;
+        if (maxD == null || day.isAfter(maxD)) maxD = day;
+      }
+      if (minD != null && maxD != null) {
+        return DateTimeRange(start: minD, end: maxD);
+      }
+    }
+    final end = DateTime(now.year, now.month, now.day);
+    return DateTimeRange(
+      start: end.subtract(const Duration(days: 29)),
+      end: end,
+    );
+  }
+
+  // Suma total y promedio diario para el rango actual
+  (double total, double promedio, int dias) _rangeSummary() {
+    final range = _effectiveRange();
+    double total = 0.0;
+    for (final p in _pedidos) {
+      final dt = DateTime.tryParse('${p['fecha']}');
+      if (dt == null) continue;
+      final day = DateTime(dt.year, dt.month, dt.day);
+      if (!day.isBefore(range.start) && !day.isAfter(range.end)) {
+        total += (p['total'] as num).toDouble();
+      }
+    }
+    final dias = range.end.difference(range.start).inDays + 1;
+    final promedio = dias > 0 ? total / dias : total;
+    return (total, promedio, dias);
+  }
+
+  Widget _buildSummaryHeader() {
+    final (total, promedio, dias) = _rangeSummary();
+    final fmt = NumberFormat.currency(symbol: '\$');
+    return Card(
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Total en rango',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    fmt.format(total),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(width: 1, height: 36, color: Colors.grey.shade300),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Promedio diario (${dias}d)',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    NumberFormat.currency(symbol: '\$').format(promedio),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -96,6 +230,18 @@ class _DashboardsPageState extends State<DashboardsPage> {
     return map;
   }
 
+  Map<int, double> _qtyByProduct() {
+    final Map<int, double> map = {};
+    for (final p in _pedidos) {
+      final dt = DateTime.tryParse('${p['fecha']}') ?? DateTime.now();
+      if (!_inRange(dt)) continue;
+      final id = p['producto_id'] as int;
+      final qty = (p['cantidad'] as num).toDouble();
+      map[id] = (map[id] ?? 0) + qty;
+    }
+    return map;
+  }
+
   Future<void> _pickRange() async {
     final now = DateTime.now();
     final picked = await showDateRangePicker(
@@ -126,7 +272,9 @@ class _DashboardsPageState extends State<DashboardsPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
                       children: [
                         ToggleButtons(
                           isSelected: [
@@ -152,45 +300,54 @@ class _DashboardsPageState extends State<DashboardsPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(width: 12),
-                        DropdownButton<int>(
-                          value: _rangeDays,
-                          items: const [
-                            DropdownMenuItem(
-                              value: 7,
-                              child: Text('Últimos 7 días'),
-                            ),
-                            DropdownMenuItem(
-                              value: 30,
-                              child: Text('Últimos 30 días'),
-                            ),
-                            DropdownMenuItem(value: 0, child: Text('Todo')),
-                          ],
-                          onChanged:
-                              (v) => setState(() {
-                                _rangeDays = v ?? 30;
-                                _customRange = null;
-                              }),
+                        SizedBox(
+                          width: 170,
+                          child: DropdownButton<int>(
+                            isExpanded: true,
+                            value: _rangeDays,
+                            items: const [
+                              DropdownMenuItem(
+                                value: 7,
+                                child: Text('Últimos 7 días'),
+                              ),
+                              DropdownMenuItem(
+                                value: 30,
+                                child: Text('Últimos 30 días'),
+                              ),
+                              DropdownMenuItem(value: 0, child: Text('Todo')),
+                            ],
+                            onChanged:
+                                (v) => setState(() {
+                                  _rangeDays = v ?? 30;
+                                  _customRange = null;
+                                }),
+                          ),
                         ),
-                        const SizedBox(width: 8),
                         TextButton(
                           onPressed: _pickRange,
                           child: const Text('Rango personalizado'),
                         ),
                         if (_customRange != null) ...[
-                          const SizedBox(width: 8),
-                          Flexible(
+                          SizedBox(
+                            width: 210,
                             child: Text(
                               '${DateFormat('dd/MM/yyyy').format(_customRange!.start)} — ${DateFormat('dd/MM/yyyy').format(_customRange!.end)}',
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ],
                       ],
                     ),
                     const SizedBox(height: 12),
+                    _buildSummaryHeader(),
+                    const SizedBox(height: 8),
                     if (_mode == _DashMode.timeline) _buildTimelineChart(),
-                    if (_mode == _DashMode.products) _buildProductBarChart(),
+                    if (_mode == _DashMode.products) ...[
+                      _buildProductBarChart(),
+                      const SizedBox(height: 12),
+                      _buildProductQtyBarChart(),
+                    ],
                   ],
                 ),
               ),
@@ -236,6 +393,7 @@ class _DashboardsPageState extends State<DashboardsPage> {
                 .fold<double>(0, (a, b) => a > b ? a : b) *
             1.1)
         .clamp(1.0, double.infinity);
+    final yInterval = _niceInterval(maxY.toDouble());
 
     int labelStep = (points.length / 6).ceil();
     if (labelStep < 1) labelStep = 1;
@@ -254,7 +412,7 @@ class _DashboardsPageState extends State<DashboardsPage> {
               minX: 0,
               maxX: (points.length > 1 ? points.length - 1 : 1).toDouble(),
               borderData: FlBorderData(show: false),
-              gridData: FlGridData(show: true),
+              gridData: FlGridData(show: true, horizontalInterval: yInterval),
               titlesData: FlTitlesData(
                 topTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
@@ -262,10 +420,44 @@ class _DashboardsPageState extends State<DashboardsPage> {
                 rightTitles: const AxisTitles(
                   sideTitles: SideTitles(showTitles: false),
                 ),
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: true),
+                leftTitles: AxisTitles(
+                  axisNameWidget: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text(
+                      'Ventas',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  axisNameSize: 20,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    interval: yInterval,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        _formatYLabel(value),
+                        style: const TextStyle(fontSize: 10),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                      );
+                    },
+                  ),
                 ),
                 bottomTitles: AxisTitles(
+                  axisNameWidget: const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Fecha',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  axisNameSize: 20,
                   sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
@@ -319,6 +511,7 @@ class _DashboardsPageState extends State<DashboardsPage> {
     final top = entries.take(8).toList();
     double maxY = (top.first.value * 1.1).toDouble();
     if (maxY < 1.0) maxY = 1.0;
+    final yInterval = _niceInterval(maxY);
 
     return Card(
       elevation: 2,
@@ -332,13 +525,53 @@ class _DashboardsPageState extends State<DashboardsPage> {
               alignment: BarChartAlignment.spaceAround,
               maxY: maxY,
               barTouchData: BarTouchData(enabled: true),
-              gridData: FlGridData(show: true),
+              gridData: FlGridData(show: true, horizontalInterval: yInterval),
               borderData: FlBorderData(show: false),
               titlesData: FlTitlesData(
-                leftTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: true),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  axisNameWidget: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text(
+                      'Ventas',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  axisNameSize: 20,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    interval: yInterval,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        _formatYLabel(value),
+                        style: const TextStyle(fontSize: 10),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                      );
+                    },
+                  ),
                 ),
                 bottomTitles: AxisTitles(
+                  axisNameWidget: const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Producto',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  axisNameSize: 22,
                   sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
@@ -366,6 +599,121 @@ class _DashboardsPageState extends State<DashboardsPage> {
                     BarChartRodData(
                       toY: top[i].value,
                       color: Colors.blue,
+                      width: 24,
+                      borderRadius: BorderRadius.zero,
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductQtyBarChart() {
+    final data = _qtyByProduct();
+    if (data.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('No hay cantidades vendidas en el rango seleccionado.'),
+      );
+    }
+
+    final entries =
+        data.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final top = entries.take(8).toList();
+    double maxY = (top.first.value * 1.1).toDouble();
+    if (maxY < 1.0) maxY = 1.0;
+    final yInterval = _niceInterval(maxY);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: SizedBox(
+        height: 300,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: maxY,
+              barTouchData: BarTouchData(enabled: true),
+              gridData: FlGridData(show: true, horizontalInterval: yInterval),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  axisNameWidget: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text(
+                      'Unidades',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  axisNameSize: 20,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    interval: yInterval,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        _formatYLabel(value),
+                        style: const TextStyle(fontSize: 10),
+                        maxLines: 1,
+                        overflow: TextOverflow.clip,
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  axisNameWidget: const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Producto',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  axisNameSize: 22,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      final idx = value.toInt();
+                      if (idx < 0 || idx >= top.length)
+                        return const SizedBox.shrink();
+                      final id = top[idx].key;
+                      final label = _productos[id] ?? 'ID:$id';
+                      return RotatedBox(
+                        quarterTurns: 3,
+                        child: Text(
+                          label,
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      );
+                    },
+                    reservedSize: 56,
+                  ),
+                ),
+              ),
+              barGroups: List.generate(top.length, (i) {
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: top[i].value,
+                      color: Colors.purple,
                       width: 24,
                       borderRadius: BorderRadius.zero,
                     ),
