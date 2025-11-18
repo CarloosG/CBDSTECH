@@ -17,7 +17,6 @@ class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
   String? _userRole;
   bool _isLoadingRole = true;
-  bool _initialAdminIndexApplied = false;
 
   @override
   void initState() {
@@ -40,9 +39,8 @@ class _MainPageState extends State<MainPage> {
         setState(() {
           _userRole = response['rol'] as String?;
           _isLoadingRole = false;
-          if (_userRole == 'admin' && !_initialAdminIndexApplied) {
-            _selectedIndex = 2; // Admin tab por defecto
-            _initialAdminIndexApplied = true;
+          if (_userRole == 'admin') {
+            _selectedIndex = 0; // Admin tab por defecto
           }
         });
       } else {
@@ -66,8 +64,6 @@ class _MainPageState extends State<MainPage> {
   List<Widget> get _pages {
     if (_userRole == 'admin') {
       return const [
-        HomePage(),
-        ShoppingCartPage(),
         AdminOrdersPage(), // Vista de administrador
         ProfilePage(),
       ];
@@ -85,11 +81,6 @@ class _MainPageState extends State<MainPage> {
   List<BottomNavigationBarItem> get _navigationItems {
     if (_userRole == 'admin') {
       return const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
-          label: 'Carrito',
-        ),
         BottomNavigationBarItem(
           icon: Icon(Icons.admin_panel_settings),
           label: 'Admin',
