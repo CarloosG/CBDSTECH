@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({super.key});
@@ -14,6 +16,8 @@ class _SalesPageState extends State<SalesPage> {
   String? error;
 
   List<Map<String, dynamic>> ventas = [];
+  List<Map<String, dynamic>> ventasIntegradas = [];
+  bool loadingIntegradas = true;
 
   String filtroEstado = 'todos';
   String? filtroProducto;
@@ -23,10 +27,15 @@ class _SalesPageState extends State<SalesPage> {
   List<String> productos = [];
   List<String> ciudades = [];
 
+  // Configuración para la segunda base de datos
+  static const String _externalSupabaseUrl = 'https://ccprqkmjnlvxwbmtzjxq.supabase.co';
+  static const String _externalAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjcHJxa21qbmx2eHdibXR6anhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI5MzgsImV4cCI6MjA3MzYzODkzOH0.QwkiCc1hzOrumqSe_yoTaqRroCWmOlmhBnd8TYtVgUg';
+
   @override
   void initState() {
     super.initState();
     cargarVentas();
+    cargarVentasIntegradas();
   }
 
   Future<void> cargarVentas() async {
@@ -77,6 +86,77 @@ class _SalesPageState extends State<SalesPage> {
     }
   }
 
+  Future<void> cargarVentasIntegradas() async {
+    try {
+      final orderItemsResponse = await http.get(
+        Uri.parse('$_externalSupabaseUrl/rest/v1/order_items'),
+        headers: {
+          'apikey': _externalAnonKey,
+          'Authorization': 'Bearer $_externalAnonKey',
+        },
+      );
+
+      final ordersResponse = await http.get(
+        Uri.parse('$_externalSupabaseUrl/rest/v1/orders'),
+        headers: {
+          'apikey': _externalAnonKey,
+          'Authorization': 'Bearer $_externalAnonKey',
+        },
+      );
+
+      final productsResponse = await http.get(
+        Uri.parse('$_externalSupabaseUrl/rest/v1/products'),
+        headers: {
+          'apikey': _externalAnonKey,
+          'Authorization': 'Bearer $_externalAnonKey',
+        },
+      );
+
+      if (orderItemsResponse.statusCode == 200 &&
+          ordersResponse.statusCode == 200 &&
+          productsResponse.statusCode == 200) {
+        final orderItems = jsonDecode(orderItemsResponse.body) as List;
+        final orders = jsonDecode(ordersResponse.body) as List;
+        final products = jsonDecode(productsResponse.body) as List;
+
+        final ordersMap = {for (var o in orders) o['id']: o};
+        final productsMap = {for (var p in products) p['id']: p};
+
+        final List<Map<String, dynamic>> resultado = [];
+
+        for (var item in orderItems) {
+          final order = ordersMap[item['order_id']];
+          final product = productsMap[item['product_id']];
+
+          if (order != null && product != null) {
+            resultado.add({
+              'order_id': item['order_id'],
+              'product_id': item['product_id'],
+              'product_name': product['name'],
+              'quantity': item['quantity'],
+              'subtotal': item['subtotal'],
+              'created_at': order['created_at'],
+              'status': order['status'],
+            });
+          }
+        }
+
+        setState(() {
+          ventasIntegradas = resultado;
+          loadingIntegradas = false;
+        });
+      } else {
+        setState(() {
+          loadingIntegradas = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        loadingIntegradas = false;
+      });
+    }
+  }
+
   List<Map<String, dynamic>> get ventasFiltradas {
     final now = DateTime.now();
     var data = [...ventas];
@@ -113,23 +193,58 @@ class _SalesPageState extends State<SalesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ventas'),
-        elevation: 0,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Ventas'),
+          elevation: 0,
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Tabla de Ventas'),
+              Tab(text: 'Tabla Integrada'),
+            ],
+          ),
+        ),
+        backgroundColor: Colors.grey.shade100,
+        body: loading && loadingIntegradas
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(child: Text(error!))
+                : TabBarView(
+                    children: [
+                      Column(
+                        children: [
+                          _buildHeader(),
+                          _buildFiltros(),
+                          Expanded(child: _buildTabla()),
+                        ],
+                      ),
+                      Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: const Text(
+                              'Tabla Integrada de Órdenes',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(child: _buildTablaIntegrada()),
+                        ],
+                      ),
+                    ],
+                  ),
       ),
-      backgroundColor: Colors.grey.shade100,
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-              ? Center(child: Text(error!))
-              : Column(
-                  children: [
-                    _buildHeader(),
-                    _buildFiltros(),
-                    Expanded(child: _buildTabla()),
-                  ],
-                ),
     );
   }
 
@@ -302,4 +417,88 @@ class _SalesPageState extends State<SalesPage> {
       ),
     );
   }
+
+  Widget _buildTablaIntegrada() {
+    if (loadingIntegradas) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (ventasIntegradas.isEmpty) {
+      return const Center(child: Text('No hay datos disponibles'));
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(Colors.green.shade50),
+          columnSpacing: 32,
+          columns: const [
+            DataColumn(label: Text('Order ID')),
+            DataColumn(label: Text('Product ID')),
+            DataColumn(label: Text('Producto')),
+            DataColumn(label: Text('Cantidad')),
+            DataColumn(label: Text('Subtotal')),
+            DataColumn(label: Text('Fecha Creación')),
+            DataColumn(label: Text('Estado')),
+          ],
+          rows: ventasIntegradas.map((v) {
+            final status = v['status'];
+            Color statusColor;
+            if (status == 'pending') {
+              statusColor = Colors.orange;
+            } else if (status == 'delivered') {
+              statusColor = Colors.green;
+            } else if (status == 'canceled') {
+              statusColor = Colors.red;
+            } else {
+              statusColor = Colors.blue;
+            }
+
+            return DataRow(
+              cells: [
+                DataCell(Text(v['order_id'].toString())),
+                DataCell(Text(v['product_id'].toString())),
+                DataCell(Text(v['product_name'] ?? 'N/A')),
+                DataCell(Text(v['quantity'].toString())),
+                DataCell(Text('\$${v['subtotal']}')),
+                DataCell(Text(formatDate(v['created_at']))),
+                DataCell(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status.toString().toUpperCase(),
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
 }
+
+
