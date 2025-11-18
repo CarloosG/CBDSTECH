@@ -28,8 +28,10 @@ class _SalesPageState extends State<SalesPage> {
   List<String> ciudades = [];
 
   // Configuración para la segunda base de datos
-  static const String _externalSupabaseUrl = 'https://ccprqkmjnlvxwbmtzjxq.supabase.co';
-  static const String _externalAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjcHJxa21qbmx2eHdibXR6anhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI5MzgsImV4cCI6MjA3MzYzODkzOH0.QwkiCc1hzOrumqSe_yoTaqRroCWmOlmhBnd8TYtVgUg';
+  static const String _externalSupabaseUrl =
+      'https://ccprqkmjnlvxwbmtzjxq.supabase.co';
+  static const String _externalAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjcHJxa21qbmx2eHdibXR6anhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjI5MzgsImV4cCI6MjA3MzYzODkzOH0.QwkiCc1hzOrumqSe_yoTaqRroCWmOlmhBnd8TYtVgUg';
 
   @override
   void initState() {
@@ -44,16 +46,16 @@ class _SalesPageState extends State<SalesPage> {
 
       final pedidos = await supabase
           .from('pedidos')
-          .select('pedido_id, usuario_id, producto_id, cantidad, total, fecha, fecha_envio')
+          .select(
+            'pedido_id, usuario_id, producto_id, cantidad, total, fecha, fecha_envio',
+          )
           .order('fecha', ascending: false);
 
       final usuarios = await supabase
           .from('usuario')
           .select('id, nombre, ciudad');
 
-      final productosDB = await supabase
-          .from('productos')
-          .select('id, nombre');
+      final productosDB = await supabase.from('productos').select('id, nombre');
 
       final usuariosMap = {for (var u in usuarios) u['id']: u};
       final productosMap = {for (var p in productosDB) p['id']: p};
@@ -74,8 +76,18 @@ class _SalesPageState extends State<SalesPage> {
 
       setState(() {
         ventas = resultado;
-        productos = productosDB.map<String>((p) => p['nombre']).toList();
-        ciudades = usuarios.map<String>((u) => u['ciudad']).toSet().toList();
+        // Filtrar valores null al crear las listas
+        productos =
+            productosDB
+                .where((p) => p['nombre'] != null)
+                .map<String>((p) => p['nombre'] as String)
+                .toList();
+        ciudades =
+            usuarios
+                .where((u) => u['ciudad'] != null)
+                .map<String>((u) => u['ciudad'] as String)
+                .toSet()
+                .toList();
         loading = false;
       });
     } catch (e) {
@@ -136,7 +148,7 @@ class _SalesPageState extends State<SalesPage> {
               'quantity': item['quantity'],
               'subtotal': item['subtotal'],
               'created_at': order['created_at'],
-              'status': order['status'],
+              'status': order['status'] ?? 'pending', // Valor por defecto
             });
           }
         }
@@ -162,33 +174,53 @@ class _SalesPageState extends State<SalesPage> {
     var data = [...ventas];
 
     if (filtroEstado != 'todos') {
-      data = data.where((v) {
-        final fEnvio = DateTime.parse(v['fecha_envio']);
-        if (filtroEstado == 'pendientes') return fEnvio.isAfter(now);
-        return fEnvio.isBefore(now);
-      }).toList();
+      data =
+          data.where((v) {
+            final fechaEnvioStr = v['fecha_envio'];
+            if (fechaEnvioStr == null) return false;
+            final fEnvio = DateTime.parse(fechaEnvioStr);
+            if (filtroEstado == 'pendientes') return fEnvio.isAfter(now);
+            return fEnvio.isBefore(now);
+          }).toList();
     }
 
     if (filtroProducto != null) {
-      data = data.where((v) => v['producto']['nombre'] == filtroProducto).toList();
+      data =
+          data.where((v) {
+            final producto = v['producto'];
+            return producto != null && producto['nombre'] == filtroProducto;
+          }).toList();
     }
 
     if (filtroCiudad != null) {
-      data = data.where((v) => v['usuario']['ciudad'] == filtroCiudad).toList();
+      data =
+          data.where((v) {
+            final usuario = v['usuario'];
+            return usuario != null && usuario['ciudad'] == filtroCiudad;
+          }).toList();
     }
 
     if (filtroFecha != null) {
-      data = data.where((v) {
-        final f = DateTime.parse(v['fecha']);
-        return f.isAfter(filtroFecha!.start) && f.isBefore(filtroFecha!.end);
-      }).toList();
+      data =
+          data.where((v) {
+            final fechaStr = v['fecha'];
+            if (fechaStr == null) return false;
+            final f = DateTime.parse(fechaStr);
+            return f.isAfter(filtroFecha!.start) &&
+                f.isBefore(filtroFecha!.end);
+          }).toList();
     }
 
     return data;
   }
 
-  String formatDate(String date) {
-    return DateFormat('dd/MM/yyyy').format(DateTime.parse(date));
+  String formatDate(String? date) {
+    if (date == null) return 'N/A';
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(date));
+    } catch (e) {
+      return 'N/A';
+    }
   }
 
   @override
@@ -200,50 +232,51 @@ class _SalesPageState extends State<SalesPage> {
           title: const Text('Ventas'),
           elevation: 0,
           bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Tabla de Ventas'),
-              Tab(text: 'Tabla Integrada'),
-            ],
+            tabs: [Tab(text: 'Tabla de Ventas'), Tab(text: 'Tabla Integrada')],
           ),
         ),
         backgroundColor: Colors.grey.shade100,
-        body: loading && loadingIntegradas
-            ? const Center(child: CircularProgressIndicator())
-            : error != null
+        body:
+            loading && loadingIntegradas
+                ? const Center(child: CircularProgressIndicator())
+                : error != null
                 ? Center(child: Text(error!))
                 : TabBarView(
-                    children: [
-                      Column(
-                        children: [
-                          _buildHeader(),
-                          _buildFiltros(),
-                          Expanded(child: _buildTabla()),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: const Text(
-                              'Tabla Integrada de Órdenes',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  children: [
+                    Column(
+                      children: [
+                        _buildHeader(),
+                        _buildFiltros(),
+                        Expanded(child: _buildTabla()),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'Tabla Integrada de Órdenes',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Expanded(child: _buildTablaIntegrada()),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        Expanded(child: _buildTablaIntegrada()),
+                      ],
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -255,10 +288,7 @@ class _SalesPageState extends State<SalesPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
         ],
       ),
       child: const Text(
@@ -286,8 +316,14 @@ class _SalesPageState extends State<SalesPage> {
                   value: filtroEstado,
                   items: const [
                     DropdownMenuItem(value: 'todos', child: Text('Todos')),
-                    DropdownMenuItem(value: 'pendientes', child: Text('Pendientes')),
-                    DropdownMenuItem(value: 'enviados', child: Text('Enviados')),
+                    DropdownMenuItem(
+                      value: 'pendientes',
+                      child: Text('Pendientes'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'enviados',
+                      child: Text('Enviados'),
+                    ),
                   ],
                   onChanged: (v) => setState(() => filtroEstado = v!),
                 ),
@@ -323,7 +359,9 @@ class _SalesPageState extends State<SalesPage> {
                   value: filtroCiudad,
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Todas')),
-                    ...ciudades.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                    ...ciudades.map(
+                      (c) => DropdownMenuItem(value: c, child: Text(c)),
+                    ),
                   ],
                   onChanged: (v) => setState(() => filtroCiudad = v),
                 ),
@@ -341,7 +379,7 @@ class _SalesPageState extends State<SalesPage> {
                   }
                 },
                 child: const Text('Rango fechas'),
-              )
+              ),
             ],
           ),
         ],
@@ -357,10 +395,7 @@ class _SalesPageState extends State<SalesPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
         ],
       ),
       child: SingleChildScrollView(
@@ -377,42 +412,57 @@ class _SalesPageState extends State<SalesPage> {
             DataColumn(label: Text('Fecha')),
             DataColumn(label: Text('Estado')),
           ],
-          rows: ventasFiltradas.map((v) {
-            final estado = DateTime.parse(v['fecha_envio']).isAfter(DateTime.now())
-                ? 'Pendiente'
-                : 'Enviado';
+          rows:
+              ventasFiltradas.map((v) {
+                final fechaEnvioStr = v['fecha_envio'];
+                final estado =
+                    fechaEnvioStr != null &&
+                            DateTime.parse(
+                              fechaEnvioStr,
+                            ).isAfter(DateTime.now())
+                        ? 'Pendiente'
+                        : 'Enviado';
 
-            return DataRow(
-              cells: [
-                DataCell(Text(v['pedido_id'].toString())),
-                DataCell(Text(v['usuario']['nombre'] ?? 'N/A')),
-                DataCell(Text(v['producto']['nombre'] ?? 'N/A')),
-                DataCell(Text(v['cantidad'].toString())),
-                DataCell(Text('\$${v['total']}')),
-                DataCell(Text(formatDate(v['fecha']))),
-                DataCell(
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: estado == 'Pendiente'
-                          ? Colors.orange.shade100
-                          : Colors.green.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                return DataRow(
+                  cells: [
+                    DataCell(Text(v['pedido_id']?.toString() ?? 'N/A')),
+                    DataCell(
+                      Text(v['usuario']?['nombre']?.toString() ?? 'N/A'),
                     ),
-                    child: Text(
-                      estado,
-                      style: TextStyle(
-                        color: estado == 'Pendiente'
-                            ? Colors.orange.shade800
-                            : Colors.green.shade800,
-                        fontWeight: FontWeight.bold,
+                    DataCell(
+                      Text(v['producto']?['nombre']?.toString() ?? 'N/A'),
+                    ),
+                    DataCell(Text(v['cantidad']?.toString() ?? '0')),
+                    DataCell(Text('\$${v['total']?.toString() ?? '0'}')),
+                    DataCell(Text(formatDate(v['fecha']))),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              estado == 'Pendiente'
+                                  ? Colors.orange.shade100
+                                  : Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          estado,
+                          style: TextStyle(
+                            color:
+                                estado == 'Pendiente'
+                                    ? Colors.orange.shade800
+                                    : Colors.green.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+                  ],
+                );
+              }).toList(),
         ),
       ),
     );
@@ -434,10 +484,7 @@ class _SalesPageState extends State<SalesPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4),
         ],
       ),
       child: SingleChildScrollView(
@@ -454,51 +501,53 @@ class _SalesPageState extends State<SalesPage> {
             DataColumn(label: Text('Fecha Creación')),
             DataColumn(label: Text('Estado')),
           ],
-          rows: ventasIntegradas.map((v) {
-            final status = v['status'];
-            Color statusColor;
-            if (status == 'pending') {
-              statusColor = Colors.orange;
-            } else if (status == 'delivered') {
-              statusColor = Colors.green;
-            } else if (status == 'canceled') {
-              statusColor = Colors.red;
-            } else {
-              statusColor = Colors.blue;
-            }
+          rows:
+              ventasIntegradas.map((v) {
+                final status = v['status']?.toString() ?? 'pending';
+                Color statusColor;
+                if (status == 'pending') {
+                  statusColor = Colors.orange;
+                } else if (status == 'delivered') {
+                  statusColor = Colors.green;
+                } else if (status == 'canceled') {
+                  statusColor = Colors.red;
+                } else {
+                  statusColor = Colors.blue;
+                }
 
-            return DataRow(
-              cells: [
-                DataCell(Text(v['order_id'].toString())),
-                DataCell(Text(v['product_id'].toString())),
-                DataCell(Text(v['product_name'] ?? 'N/A')),
-                DataCell(Text(v['quantity'].toString())),
-                DataCell(Text('\$${v['subtotal']}')),
-                DataCell(Text(formatDate(v['created_at']))),
-                DataCell(
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      status.toString().toUpperCase(),
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                return DataRow(
+                  cells: [
+                    DataCell(Text(v['order_id']?.toString() ?? 'N/A')),
+                    DataCell(Text(v['product_id']?.toString() ?? 'N/A')),
+                    DataCell(Text(v['product_name']?.toString() ?? 'N/A')),
+                    DataCell(Text(v['quantity']?.toString() ?? '0')),
+                    DataCell(Text('\$${v['subtotal']?.toString() ?? '0'}')),
+                    DataCell(Text(formatDate(v['created_at']))),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
+                  ],
+                );
+              }).toList(),
         ),
       ),
     );
   }
 }
-
-
