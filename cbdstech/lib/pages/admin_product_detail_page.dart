@@ -56,7 +56,7 @@ class AdminProductDetailPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '\$' + producto.precio.toStringAsFixed(2),
+                    '\$${producto.precio.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,

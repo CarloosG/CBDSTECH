@@ -1,6 +1,4 @@
-import 'package:cbdstech/pages/register_page.dart';
 import 'package:flutter/material.dart';
-import 'package:cbdstech/pages/home_page.dart';
 import 'package:cbdstech/auth/auth_service.dart';
 import 'package:cbdstech/pages/main_page.dart';
 

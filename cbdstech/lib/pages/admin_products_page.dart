@@ -135,7 +135,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
               ),
             )
           else
-            ..._productos.map((p) => _buildProductoCard(context, p)).toList(),
+            ..._productos.map((p) => _buildProductoCard(context, p)),
         ],
       ),
     );
@@ -209,7 +209,7 @@ class _AdminProductsPageState extends State<AdminProductsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '\$' + p.precio.toStringAsFixed(2),
+                            '\$${p.precio.toStringAsFixed(2)}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,

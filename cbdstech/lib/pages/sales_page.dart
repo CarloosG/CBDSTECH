@@ -251,7 +251,7 @@ class _SalesPageState extends State<SalesPage> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-          headingRowColor: MaterialStateProperty.all(Colors.blue.shade50),
+          headingRowColor: WidgetStateProperty.all(Colors.blue.shade50),
           columnSpacing: 32,
           columns: const [
             DataColumn(label: Text('ID')),

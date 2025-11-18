@@ -54,7 +54,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
               .getPublicUrl('images/$fileName');
         } catch (e) {
           // Si falla la subida, continuamos sin URL
-          _imageError = 'No se pudo subir la imagen: ' + e.toString();
+          _imageError = 'No se pudo subir la imagen: $e';
         }
       }
 
@@ -86,7 +86,7 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
         final msg =
             _imageError == null
                 ? 'Producto añadido correctamente'
-                : 'Producto añadido. ' + _imageError!;
+                : 'Producto añadido. ${_imageError!}';
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(msg)));
@@ -162,8 +162,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty)
+                  if (v == null || v.trim().isEmpty) {
                     return 'El nombre es obligatorio';
+                  }
                   if (v.trim().length < 3) return 'Mínimo 3 caracteres';
                   return null;
                 },
@@ -179,8 +180,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty)
+                  if (v == null || v.trim().isEmpty) {
                     return 'Las especificaciones son obligatorias';
+                  }
                   return null;
                 },
               ),
@@ -197,8 +199,9 @@ class _AdminAddProductPageState extends State<AdminAddProductPage> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty)
+                  if (v == null || v.trim().isEmpty) {
                     return 'El precio es obligatorio';
+                  }
                   final parsed = double.tryParse(v.replaceAll(',', '.'));
                   if (parsed == null) return 'Precio inválido';
                   if (parsed < 0) return 'El precio no puede ser negativo';

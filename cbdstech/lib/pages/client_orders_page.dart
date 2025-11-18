@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ClientOrdersPage extends StatefulWidget {
-  const ClientOrdersPage({Key? key}) : super(key: key);
+  const ClientOrdersPage({super.key});
 
   @override
   State<ClientOrdersPage> createState() => _ClientOrdersPageState();

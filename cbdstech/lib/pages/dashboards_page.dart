@@ -462,10 +462,12 @@ class _DashboardsPageState extends State<DashboardsPage> {
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
                       final idx = value.round();
-                      if (idx < 0 || idx >= dates.length)
+                      if (idx < 0 || idx >= dates.length) {
                         return const SizedBox.shrink();
-                      if (idx % labelStep != 0 && idx != dates.length - 1)
+                      }
+                      if (idx % labelStep != 0 && idx != dates.length - 1) {
                         return const SizedBox.shrink();
+                      }
                       final d = dates[idx];
                       return Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -576,8 +578,9 @@ class _DashboardsPageState extends State<DashboardsPage> {
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
                       final idx = value.toInt();
-                      if (idx < 0 || idx >= top.length)
+                      if (idx < 0 || idx >= top.length) {
                         return const SizedBox.shrink();
+                      }
                       final id = top[idx].key;
                       final label = _productos[id] ?? 'ID:$id';
                       return RotatedBox(
@@ -691,8 +694,9 @@ class _DashboardsPageState extends State<DashboardsPage> {
                     showTitles: true,
                     getTitlesWidget: (value, meta) {
                       final idx = value.toInt();
-                      if (idx < 0 || idx >= top.length)
+                      if (idx < 0 || idx >= top.length) {
                         return const SizedBox.shrink();
+                      }
                       final id = top[idx].key;
                       final label = _productos[id] ?? 'ID:$id';
                       return RotatedBox(
