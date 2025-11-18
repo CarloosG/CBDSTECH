@@ -17,8 +17,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
     setState(() {
       _isProcessing = true;
     });
+
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
+
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debes iniciar sesión para comprar.')),
@@ -28,8 +30,10 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
       });
       return;
     }
+
     final now = DateTime.now();
     final fechaEnvio = now.add(const Duration(days: 5));
+
     try {
       for (final item in cart.items) {
         await supabase.from('pedidos').insert({
@@ -38,23 +42,22 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
           'cantidad': item.cantidad,
           'total': item.producto.precio * item.cantidad,
           'fecha': now.toIso8601String(),
-          'fecha_envio': fechaEnvio.toIso8601String().substring(
-            0,
-            10,
-          ), // yyyy-MM-dd
+          'fecha_envio': fechaEnvio.toIso8601String().substring(0, 10),
         });
       }
+
       cart.clear();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Pedido realizado con éxito!')),
         );
-        setState(() {}); // refresca la UI
+        setState(() {});
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error al guardar el pedido: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar el pedido: $e')),
+      );
     } finally {
       setState(() {
         _isProcessing = false;
@@ -74,197 +77,219 @@ class _ShoppingCartPageState extends State<ShoppingCartPage> {
         title: const Text("🛒 Carrito de Compras"),
         backgroundColor: Colors.blue.shade700,
       ),
-      body:
-          cart.items.isEmpty
-              ? const Center(
-                child: Text(
-                  "Aquí aparecerán los productos que agregues al carrito 🛍️",
-                  style: TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              )
-              : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: cart.items.length,
-                      itemBuilder: (context, index) {
-                        final item = cart.items[index];
-                        final producto = item.producto;
+      body: cart.items.isEmpty
+          ? const Center(
+              child: Text(
+                "Aquí aparecerán los productos que agregues al carrito 🛍️",
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: cart.items.length,
+                    itemBuilder: (context, index) {
+                      final item = cart.items[index];
+                      final producto = item.producto;
 
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: Colors.blue.shade100,
-                                  child: const Icon(
-                                    Icons.shopping_bag,
-                                    color: Colors.blue,
-                                  ),
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.blue.shade100,
+                                child: const Icon(
+                                  Icons.shopping_bag,
+                                  color: Colors.blue,
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        producto.nombre,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        "\$${producto.precio.toStringAsFixed(2)}",
-                                        style: TextStyle(
-                                          color: Colors.blue.shade700,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Row(
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.remove_circle,
-                                        color: Colors.red,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          cart.decrease(producto);
-                                        });
-                                      },
-                                    ),
                                     Text(
-                                      "${item.cantidad}",
+                                      producto.nombre,
                                       style: const TextStyle(
-                                        fontSize: 16,
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 16,
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.add_circle,
-                                        color: Colors.green,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "\$${producto.precio.toStringAsFixed(2)}",
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      onPressed: () {
-                                        setState(() {
-                                          cart.add(producto);
-                                        });
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete,
-                                        color: Colors.redAccent,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          cart.remove(producto);
-                                        });
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              "${producto.nombre} eliminado del carrito ❌",
-                                            ),
-                                            duration: const Duration(
-                                              milliseconds: 1200,
-                                            ),
-                                          ),
-                                        );
-                                      },
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 15,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          "Total: \$${total.toStringAsFixed(2)}",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade900,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: _isProcessing ? null : _finalizarCompra,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 32,
-                            ),
-                            elevation: 6,
-                          ),
-                          icon:
-                              _isProcessing
-                                  ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.remove_circle,
+                                      color: Colors.red,
                                     ),
-                                  )
-                                  : const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.white,
+                                    onPressed: () {
+                                      setState(() {
+                                        cart.decrease(producto);
+                                      });
+                                    },
                                   ),
-                          label: Text(
-                            _isProcessing
-                                ? "Procesando..."
-                                : "Finalizar Compra",
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                                  Text(
+                                    "${item.cantidad}",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.add_circle,
+                                      color: Colors.green,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        cart.add(producto);
+                                      });
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.redAccent,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        cart.remove(producto);
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              "${producto.nombre} eliminado del carrito ❌"),
+                                          duration:
+                                              const Duration(milliseconds: 1200),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      );
+                    },
+                  ),
+                ),
+
+                // ----------------------
+                // SECCIÓN DEL TOTAL + BOTÓN
+                // ----------------------
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
                   ),
-                ],
-              ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        "Total: \$${total.toStringAsFixed(2)}",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // ----------------------
+                      // BOTÓN FINALIZAR COMPRA CON CONFIRMACIÓN
+                      // ----------------------
+                      ElevatedButton.icon(
+                        onPressed: _isProcessing || cart.items.isEmpty
+                            ? null
+                            : () async {
+                                final confirmado = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) {
+                                    return AlertDialog(
+                                      title: const Text('Confirmar compra'),
+                                      content: Text(
+                                          '¿Deseas finalizar tu compra por \$${total.toStringAsFixed(2)}?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: const Text('Cancelar'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Confirmar'),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+
+                                if (confirmado == true) {
+                                  _finalizarCompra();
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 32),
+                          elevation: 6,
+                        ),
+                        icon: _isProcessing
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.check_circle,
+                                color: Colors.white,
+                              ),
+                        label: Text(
+                          _isProcessing ? "Procesando..." : "Finalizar Compra",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
